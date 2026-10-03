@@ -10,7 +10,7 @@
 
 - `adblock.srs`：自动生成的 sing-box 二进制规则集。
 - `allowlist.txt`：个人白名单，一行一个域名。
-- `upstream-revision.txt`：当前构建对应的 AdGuard DNS Filter Git 提交。
+- `upstream-revision.txt`：当前构建对应的 AdGuard HostlistsRegistry Git 提交。
 - `.github/workflows/update.yml`：自动更新与转换流程。
 
 > `adblock.srs` 和 `upstream-revision.txt` 均为生成文件，不建议手动修改。
@@ -68,8 +68,8 @@ example.com
 
 工作流会：
 
-1. 获取 AdGuard DNS Filter `master` 当前提交；
-2. 从该固定提交下载 `Filters/filter.txt`；
+1. 获取 AdGuard HostlistsRegistry `main` 当前提交；
+2. 从该固定提交下载 `assets/filter_1.txt`（AdGuard DNS Filter）；
 3. 应用 `allowlist.txt`；
 4. 使用固定版本的 sing-box 转换为 `adblock.srs`；
 5. 仅当生成结果或上游提交发生变化时提交回仓库。
@@ -80,6 +80,6 @@ example.com
 
 ## 上游与许可
 
-广告规则来源于 [AdGuard DNS Filter](https://github.com/AdguardTeam/AdGuardSDNSFilter)，其项目采用 GPL-3.0。当前构建对应的上游 Git 提交记录在 `upstream-revision.txt`，可据此获取精确的对应源规则。
+广告规则来源于 [AdGuard DNS Filter](https://github.com/AdguardTeam/AdGuardSDNSFilter)，其项目采用 GPL-3.0。当前构建对应的 HostlistsRegistry Git 提交记录在 `upstream-revision.txt`，可据此从 `assets/filter_1.txt` 获取精确的对应源规则。
 
 本仓库采用 [GNU GPL v3](./LICENSE)。
