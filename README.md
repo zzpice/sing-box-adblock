@@ -1,8 +1,11 @@
 # sing-box-adblock
 
-[![Update Adblock SRS](https://github.com/zzpice/sing-box-adblock/actions/workflows/update.yml/badge.svg)](https://github.com/zzpice/sing-box-adblock/actions/workflows/update.yml)
+> 面向 sing-box / SMBox 的 DNS 广告过滤规则，从 AdGuard DNS Filter 自动生成 SRS。
 
-面向 sing-box / SMBox 的 DNS 广告过滤规则。
+[![Update Adblock SRS](https://github.com/zzpice/sing-box-adblock/actions/workflows/update.yml/badge.svg)](https://github.com/zzpice/sing-box-adblock/actions/workflows/update.yml)
+[![License](https://img.shields.io/github/license/zzpice/sing-box-adblock)](./LICENSE)
+
+**规则入口：** [adblock.srs](https://raw.githubusercontent.com/zzpice/sing-box-adblock/main/adblock.srs)
 
 本仓库以 [AdGuard DNS Filter](https://github.com/AdguardTeam/AdGuardSDNSFilter) 为上游，通过 GitHub Actions 定期转换为 sing-box 二进制规则集 `adblock.srs`。仓库只负责生成规则，不包含节点、订阅或完整 sing-box 配置。
 
