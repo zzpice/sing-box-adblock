@@ -1,0 +1,4 @@
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.srs binary linguist-generated=true
