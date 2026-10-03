@@ -56,6 +56,7 @@ jobs:
           fi
 
           export UPSTREAM_SHA="$upstream_sha"
+          echo "UPSTREAM_SHA=$upstream_sha" >> "$GITHUB_ENV"
           curl -fsSL --retry 3 --retry-delay 2             -o "$RUNNER_TEMP/adblock-source.txt"             "https://raw.githubusercontent.com/AdguardTeam/HostlistsRegistry/$upstream_sha/assets/filter_1.txt"
 
           python3 - <<'PY'
