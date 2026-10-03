@@ -1,0 +1,134 @@
+name: Update Adblock SRS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - allowlist.txt
+      - .github/workflows/update.yml
+  schedule:
+    - cron: "17 4 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-adblock
+  cancel-in-progress: false
+
+env:
+  SING_BOX_VERSION: "1.14.2"
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download sing-box
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          archive="$RUNNER_TEMP/sing-box.tar.gz"
+          directory="$RUNNER_TEMP/sing-box-$SING_BOX_VERSION-linux-amd64"
+          url="https://github.com/SagerNet/sing-box/releases/download/v$SING_BOX_VERSION/sing-box-$SING_BOX_VERSION-linux-amd64.tar.gz"
+
+          curl -fsSL --retry 3 --retry-delay 2 -o "$archive" "$url"
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          cp "$directory/sing-box" "$RUNNER_TEMP/sing-box"
+          chmod +x "$RUNNER_TEMP/sing-box"
+          "$RUNNER_TEMP/sing-box" version
+
+      - name: Fetch upstream and apply allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          upstream_sha="$(git ls-remote https://github.com/AdguardTeam/AdGuardSDNSFilter.git refs/heads/master | awk '{print $1}')"
+          if [[ ! "$upstream_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Unable to resolve AdGuard DNS Filter upstream revision." >&2
+            exit 1
+          fi
+
+          export UPSTREAM_SHA="$upstream_sha"
+          curl -fsSL --retry 3 --retry-delay 2             -o "$RUNNER_TEMP/adblock-source.txt"             "https://raw.githubusercontent.com/AdguardTeam/AdGuardSDNSFilter/$upstream_sha/Filters/filter.txt"
+
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          source = Path(os.environ["RUNNER_TEMP"]) / "adblock-source.txt"
+          allowlist = Path("allowlist.txt")
+
+          domains = set()
+          for number, raw in enumerate(allowlist.read_text(encoding="utf-8").splitlines(), start=1):
+              value = raw.strip()
+              if not value or value.startswith("#"):
+                  continue
+
+              value = value.rstrip(".")
+              try:
+                  domain = value.encode("idna").decode("ascii").lower()
+              except UnicodeError as exc:
+                  raise SystemExit(f"allowlist.txt:{number}: invalid domain: {value}") from exc
+
+              if len(domain) > 253 or "." not in domain:
+                  raise SystemExit(f"allowlist.txt:{number}: invalid domain: {value}")
+
+              labels = domain.split(".")
+              if any(
+                  not label
+                  or len(label) > 63
+                  or label.startswith("-")
+                  or label.endswith("-")
+                  or not re.fullmatch(r"[a-z0-9-]+", label)
+                  for label in labels
+              ):
+                  raise SystemExit(f"allowlist.txt:{number}: invalid domain: {value}")
+
+              domains.add(domain)
+
+          with source.open("a", encoding="utf-8", newline="\n") as handle:
+              if domains:
+                  handle.write("\n! Custom allowlist from zzpice/sing-box-adblock\n")
+                  for domain in sorted(domains):
+                      handle.write(f"@@||{domain}^\n")
+
+          print(f"Applied {len(domains)} allowlist domain(s).")
+          print(f"Upstream revision: {os.environ['UPSTREAM_SHA']}")
+          PY
+
+      - name: Convert to SRS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          "$RUNNER_TEMP/sing-box" rule-set convert             --type adguard             --output "$RUNNER_TEMP/adblock.srs"             "$RUNNER_TEMP/adblock-source.txt"
+
+          test -s "$RUNNER_TEMP/adblock.srs"
+          sha256sum "$RUNNER_TEMP/adblock.srs"
+
+      - name: Update generated files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f adblock.srs ]] && cmp -s "$RUNNER_TEMP/adblock.srs" adblock.srs; then
+            echo "Adblock rules are already up to date."
+            exit 0
+          fi
+
+          mv "$RUNNER_TEMP/adblock.srs" adblock.srs
+          printf '%s\n' "$UPSTREAM_SHA" > upstream-revision.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add adblock.srs upstream-revision.txt
+          git commit -m "chore: update adblock rules"
+          git push
