@@ -49,14 +49,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          upstream_sha="$(git ls-remote https://github.com/AdguardTeam/AdGuardSDNSFilter.git refs/heads/master | awk '{print $1}')"
+          upstream_sha="$(git ls-remote https://github.com/AdguardTeam/HostlistsRegistry.git refs/heads/main | awk '{print $1}')"
           if [[ ! "$upstream_sha" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Unable to resolve AdGuard DNS Filter upstream revision." >&2
+            echo "Unable to resolve AdGuard HostlistsRegistry upstream revision." >&2
             exit 1
           fi
 
           export UPSTREAM_SHA="$upstream_sha"
-          curl -fsSL --retry 3 --retry-delay 2             -o "$RUNNER_TEMP/adblock-source.txt"             "https://raw.githubusercontent.com/AdguardTeam/AdGuardSDNSFilter/$upstream_sha/Filters/filter.txt"
+          curl -fsSL --retry 3 --retry-delay 2             -o "$RUNNER_TEMP/adblock-source.txt"             "https://raw.githubusercontent.com/AdguardTeam/HostlistsRegistry/$upstream_sha/assets/filter_1.txt"
 
           python3 - <<'PY'
           import os
