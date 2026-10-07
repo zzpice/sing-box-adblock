@@ -1,11 +1,10 @@
-# sing-box-adblock
+# sing-box 广告过滤
 
-> 面向 sing-box / SMBox 的 DNS 广告过滤规则，从 AdGuard DNS Filter 自动生成 SRS。
+面向 sing-box / SMBox 的 DNS 广告过滤规则，由 AdGuard DNS Filter 自动生成 SRS。
 
-[![Update Adblock SRS](https://github.com/zzpice/sing-box-adblock/actions/workflows/update.yml/badge.svg)](https://github.com/zzpice/sing-box-adblock/actions/workflows/update.yml)
-[![License](https://img.shields.io/github/license/zzpice/sing-box-adblock)](./LICENSE)
+[接入说明](#sing-box-使用方式) · [下载 adblock.srs](https://raw.githubusercontent.com/zzpice/sing-box-adblock/main/adblock.srs) · [ZZP · 所有项目](https://zzp.moe/)
 
-**规则入口：** [adblock.srs](https://raw.githubusercontent.com/zzpice/sing-box-adblock/main/adblock.srs)
+[![检查与更新](https://github.com/zzpice/sing-box-adblock/actions/workflows/update.yml/badge.svg)](https://github.com/zzpice/sing-box-adblock/actions/workflows/update.yml)
 
 本仓库以 [AdGuard DNS Filter](https://github.com/AdguardTeam/AdGuardSDNSFilter) 为上游，通过 GitHub Actions 定期转换为 sing-box 二进制规则集 `adblock.srs`。仓库只负责生成规则，不包含节点、订阅或完整 sing-box 配置。
 
@@ -86,3 +85,7 @@ example.com
 广告规则来源于 [AdGuard DNS Filter](https://github.com/AdguardTeam/AdGuardSDNSFilter)，其项目采用 GPL-3.0。当前构建对应的 HostlistsRegistry Git 提交记录在 `upstream-revision.txt`，可据此从 `assets/filter_1.txt` 获取精确的对应源规则。
 
 本仓库采用 [GNU GPL v3](./LICENSE)。
+
+## 项目体系
+
+属于 [ZZP 工具与资源](https://zzp.moe/)。共同的[设计与仓库规范](https://github.com/zzpice/zzp-home/blob/main/docs/design.md)由入口仓库维护；使用步骤、生成产物和验证方式仍以本仓库为准。
