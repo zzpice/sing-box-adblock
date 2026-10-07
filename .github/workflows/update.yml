@@ -3,131 +3,65 @@ name: Update Adblock SRS
 on:
   push:
     branches: [main]
-    paths:
-      - allowlist.txt
-      - .github/workflows/update.yml
+  pull_request:
+  workflow_dispatch:
   schedule:
     - cron: "17 4 * * 1,4"
-  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: update-adblock
+  group: sing-box-adblock-${{ github.ref }}
   cancel-in-progress: false
 
 env:
   SING_BOX_VERSION: "1.14.2"
+  SING_BOX_SHA256: "a684484d7477d1437282ee411f4d131d0340aaad60a7868841ebd5d87dd8a0c6"
 
 jobs:
-  update:
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Download sing-box
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s scripts -p 'test_*.py'
+  publish:
+    if: github.event_name != 'pull_request'
+    needs: check
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Download verified sing-box
         shell: bash
         run: |
           set -euo pipefail
-
           archive="$RUNNER_TEMP/sing-box.tar.gz"
-          directory="$RUNNER_TEMP/sing-box-$SING_BOX_VERSION-linux-amd64"
-          url="https://github.com/SagerNet/sing-box/releases/download/v$SING_BOX_VERSION/sing-box-$SING_BOX_VERSION-linux-amd64.tar.gz"
-
-          curl -fsSL --retry 3 --retry-delay 2 -o "$archive" "$url"
+          curl -fsSL --retry 3 --retry-delay 2 -o "$archive" "https://github.com/SagerNet/sing-box/releases/download/v$SING_BOX_VERSION/sing-box-$SING_BOX_VERSION-linux-amd64.tar.gz"
+          printf '%s  %s\n' "$SING_BOX_SHA256" "$archive" | sha256sum --check --strict
           tar -xzf "$archive" -C "$RUNNER_TEMP"
-          cp "$directory/sing-box" "$RUNNER_TEMP/sing-box"
-          chmod +x "$RUNNER_TEMP/sing-box"
-          "$RUNNER_TEMP/sing-box" version
-
-      - name: Fetch upstream and apply allowlist
+          echo "$RUNNER_TEMP/sing-box-$SING_BOX_VERSION-linux-amd64" >> "$GITHUB_PATH"
+      - name: Build and validate artifacts
+        run: python scripts/build.py
+      - name: Publish changed artifacts
         shell: bash
         run: |
           set -euo pipefail
-
-          upstream_sha="$(git ls-remote https://github.com/AdguardTeam/HostlistsRegistry.git refs/heads/main | awk '{print $1}')"
-          if [[ ! "$upstream_sha" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Unable to resolve AdGuard HostlistsRegistry upstream revision." >&2
-            exit 1
-          fi
-
-          export UPSTREAM_SHA="$upstream_sha"
-          echo "UPSTREAM_SHA=$upstream_sha" >> "$GITHUB_ENV"
-          curl -fsSL --retry 3 --retry-delay 2             -o "$RUNNER_TEMP/adblock-source.txt"             "https://raw.githubusercontent.com/AdguardTeam/HostlistsRegistry/$upstream_sha/assets/filter_1.txt"
-
-          python3 - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          source = Path(os.environ["RUNNER_TEMP"]) / "adblock-source.txt"
-          allowlist = Path("allowlist.txt")
-
-          domains = set()
-          for number, raw in enumerate(allowlist.read_text(encoding="utf-8").splitlines(), start=1):
-              value = raw.strip()
-              if not value or value.startswith("#"):
-                  continue
-
-              value = value.rstrip(".")
-              try:
-                  domain = value.encode("idna").decode("ascii").lower()
-              except UnicodeError as exc:
-                  raise SystemExit(f"allowlist.txt:{number}: invalid domain: {value}") from exc
-
-              if len(domain) > 253 or "." not in domain:
-                  raise SystemExit(f"allowlist.txt:{number}: invalid domain: {value}")
-
-              labels = domain.split(".")
-              if any(
-                  not label
-                  or len(label) > 63
-                  or label.startswith("-")
-                  or label.endswith("-")
-                  or not re.fullmatch(r"[a-z0-9-]+", label)
-                  for label in labels
-              ):
-                  raise SystemExit(f"allowlist.txt:{number}: invalid domain: {value}")
-
-              domains.add(domain)
-
-          with source.open("a", encoding="utf-8", newline="\n") as handle:
-              if domains:
-                  handle.write("\n! Custom allowlist from zzpice/sing-box-adblock\n")
-                  for domain in sorted(domains):
-                      handle.write(f"@@||{domain}^\n")
-
-          print(f"Applied {len(domains)} allowlist domain(s).")
-          print(f"Upstream revision: {os.environ['UPSTREAM_SHA']}")
-          PY
-
-      - name: Convert to SRS
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          "$RUNNER_TEMP/sing-box" rule-set convert             --type adguard             --output "$RUNNER_TEMP/adblock.srs"             "$RUNNER_TEMP/adblock-source.txt"
-
-          test -s "$RUNNER_TEMP/adblock.srs"
-          sha256sum "$RUNNER_TEMP/adblock.srs"
-
-      - name: Update generated files
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -f adblock.srs ]] && cmp -s "$RUNNER_TEMP/adblock.srs" adblock.srs; then
-            echo "Adblock rules are already up to date."
+          if [[ -z "$(git status --porcelain -- adblock.srs upstream-revision.txt)" ]]; then
+            echo "Artifacts are current."
             exit 0
           fi
-
-          mv "$RUNNER_TEMP/adblock.srs" adblock.srs
-          printf '%s\n' "$UPSTREAM_SHA" > upstream-revision.txt
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add adblock.srs upstream-revision.txt

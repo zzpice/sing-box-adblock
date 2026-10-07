@@ -76,9 +76,26 @@ example.com
 4. 使用固定版本的 sing-box 转换为 `adblock.srs`；
 5. 仅当生成结果或上游提交发生变化时提交回仓库。
 
-自动任务每周一、周四运行，也支持手动运行；修改白名单或工作流时也会自动触发。
+自动任务每周一、周四运行，也支持手动运行；推送到 main 时会重新检查和构建。PR 只运行只读检查。下载转换器后核对 SHA-256；上游为 HTML、类型异常、过大或不足 10,000 条 DNS 规则时停止，不覆盖已有产物。转换成功后分别比较二进制与提交记录，即使二进制相同也更新对应上游提交。
 
 当前转换版本：**sing-box 1.14.2**。
+
+## 本地维护
+
+Python 3.10+、Git 与官方 sing-box 1.14.2，无 Python 第三方依赖：
+
+```sh
+python3 -m unittest discover -s scripts -p 'test_*.py'
+python3 scripts/build.py --sing-box /path/to/sing-box
+```
+
+默认解析上游提交后下载固定版本。复现已有构建时，按 `upstream-revision.txt` 下载对应 `filter_1.txt`，再运行：
+
+```sh
+python3 scripts/build.py --sing-box /path/to/sing-box --source filter_1.txt --revision <完整上游提交>
+```
+
+`--source` 与 `--revision` 必须一起使用。白名单规范化、源数据检查、临时转换与产物更新都在 `scripts/build.py` 中，CI 不再另维护一份内嵌实现。官方转换器不支持的 AdGuard 规则会报告并略过，结果并不等于完整浏览器广告过滤。
 
 ## 上游与许可
 
@@ -88,4 +105,4 @@ example.com
 
 ## 项目体系
 
-属于 [ZZP 工具与资源](https://zzp.moe/)。共同的[设计与仓库规范](https://github.com/zzpice/zzp-home/blob/main/docs/design.md)由入口仓库维护；使用步骤、生成产物和验证方式仍以本仓库为准。
+属于 [ZZP 工具与资源](https://zzp.moe/)。使用、验证与维护方式以本仓库为准。
