@@ -1,4 +1,4 @@
-name: Update Adblock SRS
+name: Update sing-box adblock rules
 
 on:
   push:

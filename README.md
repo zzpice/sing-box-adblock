@@ -102,7 +102,3 @@ python3 scripts/build.py --sing-box /path/to/sing-box --source filter_1.txt --re
 广告规则来源于 [AdGuard DNS Filter](https://github.com/AdguardTeam/AdGuardSDNSFilter)，其项目采用 GPL-3.0。当前构建对应的 HostlistsRegistry Git 提交记录在 `upstream-revision.txt`，可据此从 `assets/filter_1.txt` 获取精确的对应源规则。
 
 本仓库采用 [GNU GPL v3](./LICENSE)。
-
-## 项目体系
-
-属于 [ZZP 工具与资源](https://zzp.moe/)。使用、验证与维护方式以本仓库为准。
